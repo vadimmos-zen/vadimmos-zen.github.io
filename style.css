@@ -1,0 +1,169 @@
+:root {
+  --main-bg-color: whitesmoke;
+  --second-bg-color: #f5f5f5;
+  --main-color: #161616;
+  --main-font-family: Roboto, Noto, sans-serif;
+  --href-color: blue;
+  --href-visited-color: magenta;
+  --error-color: rgb(255, 64, 64);
+  --warning-color: rgb(255, 210, 64);
+  --success-color: rgb(0 170 15);
+}
+
+html, body, dialog {
+  background-color: var(--main-bg-color);
+  color: var(--main-color);
+  font-family: var(--main-font-family);
+}
+
+html, body{
+  display: flex;
+  flex-direction: column;
+}
+
+html {
+  height: 100vh;
+  width: 100vw;
+}
+
+body {
+  flex: auto;
+}
+
+html, body, h1, h2, h3, h4, h5, h6, .m-p-0 {
+  margin: 0;
+}
+
+html, body, dialog, h1, h2, h3, h4, h5, h6, .m-p-0 {
+  padding: 0;
+}
+
+h1 {
+  font-size: 1.7em;
+}
+
+header {
+  padding: 8px;
+}
+
+ul, menu {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: var(--href-color);
+}
+
+a:visited {
+  color: var(--href-visited-color);
+}
+
+textarea {
+  background-color: transparent;
+  color: inherit;
+}
+
+input{
+  margin: 0;
+}
+
+button {
+  background-color: var(--main-bg-color);
+  opacity: 0.8;
+  color: inherit;
+  user-select: none;
+  padding: 8px;
+  border-style: none;
+  border-radius: 3px;
+  box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5), 0 0 5px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  margin: 1px;
+}
+
+button:hover {
+  opacity: 0.9;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+button:active {
+  box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.33);
+  opacity: 1;
+}
+
+dialog {
+  border: none;
+  border-radius: 3px;
+  box-shadow: 0 8px 10px 1px rgba(0, 0, 0, 0.14), 0 3px 14px 2px rgba(0, 0, 0, 0.12), 0 5px 5px -3px rgba(0, 0, 0, 0.2);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  animation: fade-in 1s;
+}
+
+*[disabled], *:disabled {
+  opacity: 0.5;
+}
+
+.m-0 {
+  margin: 0;
+}
+
+.p-0 {
+  padding: 0;
+}
+
+.raised {
+  box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5), 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.center {
+  align-items: center;
+}
+
+.horizontal, .vertical {
+  display: flex;
+}
+
+.horizontal {
+  flex-direction: row;
+}
+
+.vertical {
+  flex-direction: column;
+}
+
+.flex {
+  flex: auto;
+}
+
+.no-flex {
+  flex: 0 0 auto;
+}
+
+[hidden], .hidden {
+  display: none;
+}
+
+.flow-start{
+  justify-self: flex-start;
+}
+.flow-center{
+  justify-self: center;
+}
+.flow-start{
+  justify-self: flex-end;
+}
+
+
+
+@keyframes fade-in {
+  from {
+      opacity: 0;
+  }
+  to {
+      opacity: 1;
+  }
+}

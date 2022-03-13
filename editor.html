@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#353535">
+  <meta name="Description" content="vadimmos portal">
+  <title>Редактор</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/dialog.css">
+  <style>
+    summary{
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      user-select: none;
+      padding: 4px 8px;
+    }
+    summary::before{
+      display: block;
+      margin-bottom: 7px;
+      margin-right: 7px;
+    }
+    details[open] > summary::before{
+      content: "⯆";
+    }
+    details:not([open]) > summary::before{
+      content: "⯈";
+    }
+    .code-container{
+      height: calc(30vh - 20px - (31px/3));
+    }
+  </style>
+</head>
+
+<body>
+  <div class="horizontal" style="height: 100%;">
+    <div id="editors" class="vertical flex" style="height: 100%; width:90%; gap: 5px; align-self: center;">
+      <div class="horizontal">
+        <button id="saveBtn" title="сохранить результат">💾</button>
+        <button id="loadBtn" title="загрузить результат" style="width: 33px;">⭳</button>
+        <button id="showBtn" class="flex" title="посмотреть результат">Смотреть</button>
+      </div>
+      <details class="raised vertical" open>
+        <summary>
+          <div class="flex">Разметка (html)</div>
+        </summary>
+        <div id="htmlEditorElem" class="flex code-container"></div>
+      </details>
+      <details class="raised vertical" open>
+        <summary>
+          <div class="flex">Логика (js)</div>
+        </summary>
+        <div id="sjEditorElem" class="flex code-container"></div>
+      </details>
+      <details class="raised vertical" open>
+        <summary>
+          <div class="flex">Стиль (css)</div>
+        </summary>
+        <div id="cssEditorElem" class="flex code-container"></div>
+      </details>
+    </div>
+    <div id="result" class="vertical flex" style="height: 100%; width:100%; gap: 5px; display: none;">
+      <button id="backBtn">Редактировать</button>
+      <iframe id="frame" class="raised" frameborder="0" style="height: 100%;"></iframe>
+    </div>
+  </div>
+
+  <dialog id="saveDialog">
+    <form id="saveDialogForm" method="dialog">
+      <header>
+        <h3>Сохранение</h3>
+      </header>
+      <section>
+        <div>
+          <label>
+            <div>Наименование записи</div>
+            <input id="saveNameInpt">
+          </label>
+        </div>
+      </section>
+      <footer>
+        <div class="flex"></div>
+        <div>
+          <menu class="horizontal" style="color: whitesmoke;">
+            <li>
+              <button class="confirm" type="submit">Сохранить</button>
+            </li>
+            <li>
+              <button class="close" type="reset" onclick="saveDialog.close()">Закрыть</button>
+            </li>
+          </menu>
+        </div>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="loadDialog">
+    <form id="loadDialogForm" method="dialog">
+      <header>
+        <h3>Загрузка</h3>
+      </header>
+      <section>
+        <div>
+          <label>
+            <div>Наименование записи</div>
+            <select id="loadSelect" style="min-width: 100px;"></select>
+          </label>
+        </div>
+      </section>
+      <footer>
+        <div class="flex"></div>
+        <div>
+          <menu class="horizontal" style="color: whitesmoke;">
+            <li>
+              <button id="delBtn" type="none" style="color: black;">Удалить</button>
+            </li>
+            <li>
+              <button class="confirm" type="submit">Загрузить</button>
+            </li>
+            <li>
+              <button class="close" type="reset" onclick="loadDialog.close()">Закрыть</button>
+            </li>
+          </menu>
+        </div>
+      </footer>
+    </form>
+  </dialog>
+
+  <script src="./monaco-editor/min/vs/loader.js"></script>
+  <script>
+    let htmlEditor, cssEditor, jsEditor;
+    require.config({ paths: { vs: './monaco-editor/min/vs' } });
+    require(['vs/editor/editor.main'], () => {
+      htmlEditor = monaco.editor.create(htmlEditorElem, {
+        value: [''].join('\n'),
+        language: 'html'
+      });
+      jsEditor = monaco.editor.create(sjEditorElem, {
+        value: [''].join('\n'),
+        language: 'javascript'
+      });
+      cssEditor = monaco.editor.create(cssEditorElem, {
+        value: [''].join('\n'),
+        language: 'css'
+      });
+
+      init();
+
+      showBtn.addEventListener('click', () => {
+        frame.srcdoc = `
+      <style>
+      ${cssEditor.getValue()}
+      </style>
+      <body>
+      ${htmlEditor.getValue()}
+      </body>
+      <script defer>
+      ${jsEditor.getValue()}
+      <`+ `/script>`;
+        editors.style.setProperty('display', 'none');
+        result.style.removeProperty('display');
+      })
+      backBtn.addEventListener('click', () => {
+        editors.style.removeProperty('display');
+        result.style.setProperty('display', 'none');
+      })
+      saveBtn.addEventListener('click', showSaveDialog);
+      loadBtn.addEventListener('click', showLoadDialog);
+    });
+
+    function init() {
+      const params = String(location).split('#').reduce((res, s) => {
+        if (s && !s.startsWith('http')) {
+          try {
+            const [key, value] = s.split('=');
+            res[key] = value;
+          } catch (error) {
+            console.error(error);
+          }
+        }
+        return res;
+      }, {});
+      if (params.preset) loadPreset(params.preset);
+      else if (params.record) loadRecord(params.record);
+    }
+    function showSaveDialog() {
+      return new Promise((resolve, reject) => {
+        const submit = () => {
+          saveDialogForm.removeEventListener('submit', submit);
+          saveDialogForm.removeEventListener('reset', cancel);
+          save(saveNameInpt.value);
+          saveNameInpt.value = '';
+          resolve();
+        }
+        const cancel = () => {
+          saveDialogForm.removeEventListener('submit', submit);
+          saveDialogForm.removeEventListener('reset', cancel);
+          reject();
+        }
+        saveDialogForm.addEventListener('submit', submit);
+        saveDialogForm.addEventListener('reset', cancel);
+
+        saveDialog.showModal();
+      });
+    }
+    function showLoadDialog() {
+      return new Promise((resolve, reject) => {
+        const submit = () => {
+          loadDialogForm.removeEventListener('submit', submit);
+          loadDialogForm.removeEventListener('reset', cancel);
+          delBtn.removeEventListener('click', del);
+          loadRecord(loadSelect.value);
+          loadSelect.value = '';
+          loadSelect.innerHTML = '';
+          resolve();
+        }
+        const cancel = () => {
+          loadDialogForm.removeEventListener('submit', submit);
+          loadDialogForm.removeEventListener('reset', cancel);
+          delBtn.removeEventListener('click', del);
+          loadSelect.value = '';
+          loadSelect.innerHTML = '';
+          reject();
+        }
+        const del = (e) => {
+          e.preventDefault();
+          loadDialogForm.removeEventListener('submit', submit);
+          loadDialogForm.removeEventListener('reset', cancel);
+          delBtn.removeEventListener('click', del);
+          delRecord(loadSelect.value);
+          loadSelect.value = '';
+          loadSelect.innerHTML = '';
+          loadDialog.close();
+          resolve();
+        }
+        loadDialogForm.addEventListener('submit', submit);
+        loadDialogForm.addEventListener('reset', cancel);
+        delBtn.addEventListener('click', del);
+
+        const storage = JSON.parse(localStorage.getItem('records') || '{}');
+
+        for (const key in storage) {
+          const opt = document.createElement('option');
+          opt.value = key;
+          opt.label = key;
+          loadSelect.appendChild(opt);
+        }
+
+        loadDialog.showModal();
+      });
+    }
+    function save(name) {
+      const data = {
+        html: htmlEditor.getValue(),
+        js: jsEditor.getValue(),
+        css: cssEditor.getValue()
+      };
+      const storage = JSON.parse(localStorage.getItem('records') || '{}');
+      storage[name] = data;
+      localStorage.setItem('records', JSON.stringify(storage));
+    }
+    function delRecord(name) {
+      const data = {
+        html: htmlEditor.getValue(),
+        js: jsEditor.getValue(),
+        css: cssEditor.getValue()
+      };
+      const storage = JSON.parse(localStorage.getItem('records') || '{}');
+      delete storage[name];
+      localStorage.setItem('records', JSON.stringify(storage));
+    }
+    function loadRecord(name) {
+      if (!name) return;
+      const storage = JSON.parse(localStorage.getItem('records') || '{}');
+      const data = storage[name];
+      if (data && Object.keys(data).length > 0) {
+        cssEditor.setValue(data?.css);
+        htmlEditor.setValue(data?.html);
+        jsEditor.setValue(data?.js);
+      }
+    }
+    function loadPreset(name) {
+
+    }
+    function clickDelete(event) {
+      event.preventDefault();
+      saveDialogForm.dispatchEvent(new Event('delete'));
+    }
+  </script>
+</body>
+
+</html>
