@@ -279,6 +279,7 @@
         cssEditor.setValue(data?.css);
         htmlEditor.setValue(data?.html);
         jsEditor.setValue(data?.js);
+        location.hash = `#record=${name}`;
       }
     }
     function loadPreset(name) {
