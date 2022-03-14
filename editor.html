@@ -29,7 +29,10 @@
       content: "⯈";
     }
     .code-container{
-      height: calc(30vh - 20px - (31px/3));
+      height: calc(30vh - 25px);
+    }
+    .resizer{
+      background: linear-gradient(#00000000 0%, #00000000 48%, #0000007f 50%, #00000000 52%, #00000000 100%);
     }
   </style>
 </head>
@@ -48,12 +51,14 @@
         </summary>
         <div id="htmlEditorElem" class="flex code-container"></div>
       </details>
+      <!-- <div class="resizer" resize-name="htmlEditorElem"></div> -->
       <details class="raised vertical" open>
         <summary>
           <div class="flex">Логика (js)</div>
         </summary>
         <div id="sjEditorElem" class="flex code-container"></div>
       </details>
+      <!-- <div class="resizer" resize-name="sjEditorElem"></div> -->
       <details class="raised vertical" open>
         <summary>
           <div class="flex">Стиль (css)</div>
@@ -131,37 +136,27 @@
   <script src="./monaco-editor/min/vs/loader.js"></script>
   <script>
     let htmlEditor, cssEditor, jsEditor;
+
+    const records = createLSProxy('records');
+    const sizes = createLSProxy('sizes');
+    for (const e of document.querySelectorAll('.resizer')) {
+      makeResizer(e);
+    }
+
     require.config({ paths: { vs: './monaco-editor/min/vs' } });
     require(['vs/editor/editor.main'], () => {
-      htmlEditor = monaco.editor.create(htmlEditorElem, {
-        value: [''].join('\n'),
-        language: 'html'
-      });
-      jsEditor = monaco.editor.create(sjEditorElem, {
-        value: [''].join('\n'),
-        language: 'javascript'
-      });
-      cssEditor = monaco.editor.create(cssEditorElem, {
-        value: [''].join('\n'),
-        language: 'css'
-      });
+      htmlEditor = attachEditor(htmlEditorElem, { language: 'html' });
+      jsEditor = attachEditor(sjEditorElem, { language: 'html' });
+      cssEditor = attachEditor(cssEditorElem, { language: 'html' });
 
       init();
 
       showBtn.addEventListener('click', () => {
-        frame.srcdoc = `
-      <style>
-      ${cssEditor.getValue()}
-      </style>
-      <body>
-      ${htmlEditor.getValue()}
-      </body>
-      <script defer>
-      ${jsEditor.getValue()}
-      <`+ `/script>`;
+        dataChange();
         editors.style.setProperty('display', 'none');
         result.style.removeProperty('display');
       })
+
       backBtn.addEventListener('click', () => {
         editors.style.removeProperty('display');
         result.style.setProperty('display', 'none');
@@ -169,6 +164,27 @@
       saveBtn.addEventListener('click', showSaveDialog);
       loadBtn.addEventListener('click', showLoadDialog);
     });
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        if (entry?.target?.$editor?.layout) {
+          const e = (entry.target.$editorElem || entry.target);
+          e.style.setProperty('width', `${e.parentElement.offsetWidth}px`);
+
+          entry.target.$editor.layout?.();
+        }
+      }
+    })
+
+    function attachEditor(elem, { value = '', language = 'javascript' }) {
+      const editor = monaco.editor.create(elem, { value, language });
+      elem.$editor = editor;
+      elem.parentElement.$editor = editor;
+      elem.parentElement.$editorElem = elem;
+      resizeObserver.observe(elem.parentElement);
+      elem.oninput = (e) => { };
+      return editor;
+    }
 
     function init() {
       const params = String(location).split('#').reduce((res, s) => {
@@ -239,9 +255,7 @@
         loadDialogForm.addEventListener('reset', cancel);
         delBtn.addEventListener('click', del);
 
-        const storage = JSON.parse(localStorage.getItem('records') || '{}');
-
-        for (const key in storage) {
+        for (const key in getLS('records')) {
           const opt = document.createElement('option');
           opt.value = key;
           opt.label = key;
@@ -257,9 +271,7 @@
         js: jsEditor.getValue(),
         css: cssEditor.getValue()
       };
-      const storage = JSON.parse(localStorage.getItem('records') || '{}');
-      storage[name] = data;
-      localStorage.setItem('records', JSON.stringify(storage));
+      records[name] = data;
     }
     function delRecord(name) {
       const data = {
@@ -267,14 +279,11 @@
         js: jsEditor.getValue(),
         css: cssEditor.getValue()
       };
-      const storage = JSON.parse(localStorage.getItem('records') || '{}');
-      delete storage[name];
-      localStorage.setItem('records', JSON.stringify(storage));
+      delete records[name];
     }
     function loadRecord(name) {
       if (!name) return;
-      const storage = JSON.parse(localStorage.getItem('records') || '{}');
-      const data = storage[name];
+      const data = records[name];
       if (data && Object.keys(data).length > 0) {
         cssEditor.setValue(data?.css);
         htmlEditor.setValue(data?.html);
@@ -288,6 +297,48 @@
     function clickDelete(event) {
       event.preventDefault();
       saveDialogForm.dispatchEvent(new Event('delete'));
+    }
+    function createLSProxy(storKey) {
+      return new Proxy(getLS(),
+        {
+          get(t, key) {
+            const src = getLS(storKey);
+            Object.assign(t, src);
+            return t[key];
+          },
+          set(t, key, value) {
+            let src = getLS(storKey);
+            src[key] = value;
+            Object.assign(t, src);
+            setLS(storKey, t);
+            return true;
+          },
+          deleteProperty(t, key) {
+            const src = getLS(storKey);
+            delete src[key];
+            Object.assign(t, src);
+            setLS(storKey, t)
+          }
+        }
+      );
+    }
+    function getLS(key) {
+      return JSON.parse(localStorage.getItem(key) || '{}');
+    }
+    function setLS(key, obj) {
+      localStorage.setItem(key, JSON.stringify(obj));
+    }
+    function dataChange() {
+      frame.srcdoc = `
+<style>
+${cssEditor.getValue()}
+</style>
+<body>
+${htmlEditor.getValue()}
+</body>
+<script defer>
+${jsEditor.getValue()}
+<`+ `/script>`;
     }
   </script>
 </body>
