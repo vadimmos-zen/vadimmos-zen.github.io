@@ -146,8 +146,8 @@
     require.config({ paths: { vs: './monaco-editor/min/vs' } });
     require(['vs/editor/editor.main'], () => {
       htmlEditor = attachEditor(htmlEditorElem, { language: 'html' });
-      jsEditor = attachEditor(sjEditorElem, { language: 'html' });
-      cssEditor = attachEditor(cssEditorElem, { language: 'html' });
+      jsEditor = attachEditor(sjEditorElem, { language: 'javascript' });
+      cssEditor = attachEditor(cssEditorElem, { language: 'css' });
 
       init();
 
