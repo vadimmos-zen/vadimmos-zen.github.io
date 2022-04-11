@@ -315,8 +315,8 @@
           },
           deleteProperty(t, key) {
             const src = getLS(storKey);
-            delete src[key];
             Object.assign(t, src);
+            delete t[key];            
             setLS(storKey, t)
           }
         }
